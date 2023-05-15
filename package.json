@@ -1,0 +1,14 @@
+{
+  "name": "kin",
+  "version": "1.0.0",
+  "description": "",
+  "scripts": {
+    "start": "func start",
+    "test": "echo \"No tests yet...\""
+  },
+  "dependencies": {
+    "api": "^5.0.8",
+    "axios": "^1.4.0",
+    "snowflake-sdk": "^1.6.21"
+  }
+}

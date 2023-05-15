@@ -1,0 +1,369 @@
+epc_company_id
+    1368
+survey_id
+    1246955
+updated_at
+    2023-01-11 20:20:23
+created_at
+    2023-01-11 20:20:23
+id
+    645931
+status
+    pending
+company_id
+    1368
+priority
+    Urgent
+customerData
+    company_id
+        1368
+    office_id
+        4050
+    creator_id
+        47682
+    agent_id
+        null
+    setter_id
+        47682
+    first_name
+        Judy
+    last_name
+        Kelley
+    email
+        addison.r@kinhome.com
+    mobile
+        5404813472
+    secondary_first_name
+        null
+    secondary_last_name
+        null
+    secondary_mobile
+    secondary_email
+        null
+    address
+        206 Wilmington Pkwy
+    city
+        Cape Coral
+    state
+        FL
+    zip
+        33993
+    county
+        Lee County
+    lat
+        26.71438170
+    lng
+        -81.97881420
+    timezone
+        America/New_York
+    details
+        SR User:Javaughn Gomes
+        SR Email:jausome97@hotmail.com
+    external_id
+        1746088
+    lead_source
+        Sales Rabbit
+    meta_data
+        nem_signer
+            null
+nem_override
+    null
+gmapsOverride
+    0
+has_valid_email
+    1
+location_confirmed
+    true
+primary_sms_supported
+    1
+invalidEmailNotificationSent
+    0
+status_id
+    -1
+lead_router_id
+    null
+referral_id
+    null
+deleted_at
+    null
+language
+    en_US
+fullName
+    Judy Kelley
+id
+    1320400
+created
+    2023-01-11T19:53:26+00:00
+updated
+    2023-01-11T20:19:28+00:00
+fullState
+    Florida
+fullAddress
+    206 Wilmington Pkwy Cape Coral, FL 33993
+status_name
+    null
+created_by_name
+    Javaughn Gomes
+created_by_email
+    jausome97@hotmail.com
+created_by_phone
+    (540) 481-3472
+creator
+    first_name
+        Javaughn
+    last_name
+        Gomes
+    email
+        jausome97@hotmail.com
+    phone
+        9543470346
+    timezone
+        America/New_York
+    id
+        47682
+    integrations
+        SalesRabbit
+Lead
+integration_record_id
+1746088
+record_type
+Lead
+enerflo_id
+1320400
+last_synced
+2023-01-11T19:53:33+00:00
+updated_at
+2023-01-11T19:53:33+00:00
+created_at
+2023-01-11T19:53:33+00:00
+setter
+first_name
+Javaughn
+last_name
+Gomes
+email
+jausome97@hotmail.com
+valid_email
+1
+phone
+9543470346
+timezone
+America/New_York
+id
+47682
+meta
+inactive
+0
+solo_email
+intercom_id
+null
+is_view_only
+0
+allow_optimus
+1
+valid_email_ts
+2023-01-10 19:38:23
+has_valid_email
+1
+can_create_customers
+0
+primary_sms_supported
+1
+can_create_manual_installs
+0
+office
+office_name
+Fort Myers
+office_id
+4050
+office_city
+Fort Myers
+office_address
+office_zip
+office_tz
+America/New_York
+office_state
+FL
+sms_number
+null
+company
+company_name
+Kin Home
+company_phone
+8552640363
+company_address
+139 Hunter's Grv Ln #202
+company_city
+Lehi
+company_state
+UT
+company_zip
+84043
+company_email
+info@kinhome.com
+company_timezone
+America/Denver
+customer_notes
+futureAppointments
+surveys
+KIN Home - Optimus/SPS
+name
+KIN Home - Optimus/SPS
+type
+sales
+id
+1246955
+companyData
+company_name
+Kin Home
+company_phone
+8552640363
+company_address
+139 Hunter's Grv Ln #202
+company_city
+Lehi
+company_state
+UT
+company_zip
+84043
+company_email
+info@kinhome.com
+company_timezone
+America/Denver
+epcData
+company_name
+Kin Home
+company_phone
+8552640363
+company_address
+139 Hunter's Grv Ln #202
+company_city
+Lehi
+company_state
+UT
+company_zip
+84043
+company_email
+info@kinhome.com
+company_timezone
+America/Denver
+eventName
+new_design_request
+survey
+id
+1246955
+customer_id
+1320400
+company_id
+1368
+epc_company_id
+1368
+assignable_id
+null
+assignable_type
+null
+agent_id
+null
+user_completed_id
+null
+last_updated_by
+6861
+survey_type_id
+5529
+survey_type_status_id
+null
+current_progress
+33.00
+hash
+6e7f37df-d0cc-4fea-97f7-3a2a3a58b446
+survey_data
+values
+have_hoa
+0
+solar_dr_notes
+.
+appointment_set
+1
+bill_usage_power
+5700
+epc_rooftop_type
+Asphalt
+have_utility_bill
+0
+solar_ds_priority
+Urgent
+credit_score_select
+Above Average
+solar_mounting_type
+Roof
+solar_pr_ppw_target
+3.50
+solar_decisionmakers
+1
+solar_pr_power_usage
+1
+solar_ss_shading_text
+No
+icon_setter_vs_selfgen
+1
+utility_account_number
+icon_energy_panel_picker
+2035
+income_pre_qualification
+0
+solar_dr_bill_pic_access
+0
+solar_pr_proposal_offset
+110
+icon_energy_lender_picker
+6066
+homeowner_prequalification
+1
+icon_energy_utility_picker
+454
+icon_energy_inverter_picker
+703
+solar_avg_monthly_usage_any
+0
+icon_energy_installer_picker
+1368
+complete_solar_preferred_roofs
+all-roofs-required-for-offset
+sections
+1493
+id
+1493
+user_id
+6861
+saved_ts
+2023-01-11 20:19:12
+user_name
+Addison Richards
+changed_fields
+    3112
+id
+    3112
+user_id
+    6861
+saved_ts
+    2023-01-11 20:20:22
+user_name
+    Addison Richards
+changed_fields
+    last_updated_section_id
+        3112
+    survey_data_update
+        2023-01-11 20:20:22
+    quick_data
+        null
+    quick_update
+        null
+    created_at
+        2023-01-11 19:53:33
+    updated_at
+        2023-01-11 20:20:22
+    deleted_at
+        null
+    user
+        null
+
