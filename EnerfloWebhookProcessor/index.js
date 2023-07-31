@@ -40,6 +40,7 @@ const field_mappings = {
     system_size: "system_size",
     "cost.system_cost_gross": "cost_system_cost_gross",
     "setter_user.timezone": "setter_user_timezone",
+    status_name: "status_name",
   },
 };
 
