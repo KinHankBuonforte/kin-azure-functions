@@ -84,6 +84,18 @@ const handle_webhook = async (event, connection) => {
       const new_data = Object.entries(field_mappings[entry])
         .map(([key, value]) => {
           const nested_keys = key.split(".");
+
+          if (
+            nested_keys[0] === "scheduled_start_time" ||
+            nested_keys[1] === "scheduled_end_time"
+          ) {
+            return `${value} = ${map_value(
+              data[nested_keys[0]].date
+                .replace(".000000", "+00:00")
+                .replace(" ", "T")
+            )}`;
+          }
+
           return `${value} = ${map_value(
             nested_keys.length === 2
               ? data[nested_keys[0]][[nested_keys[1]]]
