@@ -177,7 +177,7 @@ module.exports = async function (context, myTimer) {
         const maxId =maxIdInfo[0]['MAX(ID)'];
         console.log(`Max ID is ${maxId}`);
         let currentId = maxId + 1;
-        let pageIndex = 1;
+        let pageIndex = pages;
         while(currentId > maxId) {
             console.log(`Getting page ${pageIndex}`);
             data = (await axios.get(generateUrl(pageIndex))).data;
@@ -188,7 +188,7 @@ module.exports = async function (context, myTimer) {
             console.log('New current id: ' + currentId);
             records.push(...dataRecords.filter(x => x.id > maxId));
             console.log(`Page ${pageIndex} parsed`);
-            pageIndex += 1;
+            pageIndex -= 1;
         }
     } else {
         for(let i = 1; i <= pages; i++) {
