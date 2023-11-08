@@ -68,7 +68,7 @@ const handle_webhook = async (event, connection) => {
         `SELECT * FROM ENERFLO_${entry.toUpperCase()}S WHERE ID = ${id}`
       );
       if (!d) {
-        await complete_webhook(e, connection);
+        await complete_webhook(event, connection);
         return;
       }
       const api_url =
@@ -103,7 +103,6 @@ const handle_webhook = async (event, connection) => {
           )}`;
         })
         .join(", ");
-      console.log(new_data);
       await executeSql(
         connection,
         `UPDATE ENERFLO_${entry.toUpperCase()}S SET ${new_data} WHERE ID = ${id}`
@@ -118,7 +117,7 @@ const handle_webhook = async (event, connection) => {
     }
   } catch (err) {
     console.error(`${webhook_event}: ${id}`);
-    console.error(err);
+    throw err;
   }
 };
 
@@ -201,7 +200,7 @@ const executeSql = async (connection, sql, binds) => {
   });
 };
 
-module.exports = async function (context, myTimer) {
+const processWebhooks = async function (context, myTimer) {
   var timeStamp = new Date().toISOString();
 
   context.log("JavaScript timer trigger function ran!", timeStamp);
@@ -211,14 +210,18 @@ module.exports = async function (context, myTimer) {
     connection,
     "SELECT * FROM ENERFLO_WEBHOOK_EVENTS_NEW WHERE PROCESSED = FALSE ORDER BY ID ASC"
   );
-  const mapped = events.map((e) => ({
-    ...e,
-    PARAMS: JSON.parse(e.PARAMS),
-  }));
-  for (const e of mapped) {
-    const { webhook_event, id } = e.PARAMS;
-
-    console.log(`${e.ID}: ${webhook_event} - ${id}`);
-    await handle_webhook(e, connection);
+  for (const e of events) {
+    try {
+      e.PARAMS = JSON.parse(e.PARAMS.replace(/\s+/g, " "));
+      const { webhook_event, id } = e.PARAMS;
+      console.log(`${e.ID}: ${webhook_event} - ${id}`);
+      await handle_webhook(e, connection);
+    } catch (err) {
+      console.error("Failed to parse event:", e.ID);
+      console.log(e.PARAMS);
+      throw err;
+    }
   }
 };
+
+module.exports = processWebhooks;
