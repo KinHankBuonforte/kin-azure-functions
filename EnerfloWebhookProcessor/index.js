@@ -212,14 +212,14 @@ const processWebhooks = async function (context, myTimer) {
   );
   for (const e of events) {
     try {
-      e.PARAMS = JSON.parse(e.PARAMS.replace(/\s+/g, " "));
+      e.PARAMS = JSON.parse(e.PARAMS.replace(/\s+/g," "));
       const { webhook_event, id } = e.PARAMS;
       console.log(`${e.ID}: ${webhook_event} - ${id}`);
       await handle_webhook(e, connection);
     } catch (err) {
       console.error("Failed to parse event:", e.ID);
-      console.log(e.PARAMS);
-      throw err;
+      // console.log(e.PARAMS);
+      // throw err;
     }
   }
 };
