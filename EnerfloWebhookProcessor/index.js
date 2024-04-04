@@ -87,7 +87,7 @@ const handle_webhook = async (event, connection) => {
 
           if (
             nested_keys[0] === "scheduled_start_time" ||
-            nested_keys[1] === "scheduled_end_time"
+            nested_keys[0] === "scheduled_end_time"
           ) {
             return `${value} = ${map_value(
               data[nested_keys[0]].date
