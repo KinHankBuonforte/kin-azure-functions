@@ -9,6 +9,9 @@
   "dependencies": {
     "api": "^5.0.8",
     "axios": "^1.4.0",
+    "graphql": "^16.8.1",
+    "graphql-request": "^6.1.0",
+    "snakecase": "^1.0.0",
     "snowflake-sdk": "^1.6.21"
   }
 }
