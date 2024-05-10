@@ -58,6 +58,23 @@ const fetchDeals = async () => {
               status
               isActive
             }
+            utilityBills {
+              id
+              fileUpload {
+                bucket
+                contentType
+                isPublic
+                createdAt
+                key
+                region
+                size
+                updatedAt
+                uploadedAt
+                signedUrl
+                originalFilename
+                id
+              }
+            }
           }
         }
       }
@@ -70,7 +87,6 @@ const fetchDeals = async () => {
     }
     page += 1;
   }
-  console.log(records.length);
 
   const connection = await initSnowflakeConnection();
   const tableName = "ENERFLO_DEALS";
@@ -83,20 +99,39 @@ const fetchDeals = async () => {
       .slice(i, i + 100)
       .map(
         (record) =>
-          `(${columns.map((x) => sqlString(record[x.field])).join(", ")})`
+          `(${columns
+            .map((x) => sqlString(record[x.field], x.type))
+            .join(", ")})`
       )
       .join(", ");
-    await executeSql(
-      connection,
-      `INSERT INTO ${tableName} (${columns
-        .map((c) => c.column)
-        .join(", ")}) VALUES ${values}`
-    );
+
+    try {
+      await executeSql(
+        connection,
+        `INSERT INTO ${tableName} (${columns
+          .map((c) => c.column)
+          .join(", ")}) VALUES ${values}`
+      );
+    } catch (err) {
+      console.error(err);
+      break;
+    }
   }
 };
 
 const flattenObject = (obj) => {
   const flattened = {};
+
+  if (obj.utilityBills && obj.utilityBills.length) {
+    obj.utilityBills = obj.utilityBills[0];
+
+    for (const key of Object.keys(obj.utilityBills.fileUpload)) {
+      obj.utilityBills[`fileUpload_${key}`] = obj.utilityBills.fileUpload[key];
+    }
+    delete obj.utilityBills.fileUpload;
+  } else {
+    delete obj.utilityBills;
+  }
 
   for (let key of Object.keys(obj)) {
     const value = obj[key];
@@ -125,25 +160,39 @@ const flattenObject = (obj) => {
 
 const initTable = async (connection, tableName, records) => {
   let columns = [];
-  for (let key of Object.keys(records[0])) {
-    const value = records[0][key];
-    columns.push({
-      name: key,
-      value,
-    });
-  }
-  for (let column of columns) {
-    if (typeof column.value == "boolean") {
-      column.type = "BOOLEAN";
-    } else if (typeof column.value == "number") {
-      column.type = "FLOAT";
-    } else {
-      column.type = "VARCHAR";
+  for (const record of records) {
+    for (let key of Object.keys(record)) {
+      const value = record[key];
+      const column = columns.find((c) => c.name === key);
+
+      if (column) {
+        column.values.push(value);
+      } else {
+        columns.push({
+          name: key,
+          values: [value],
+        });
+      }
     }
   }
-  console.log(`CREATE TABLE IF NOT EXISTS ${tableName} (${columns
-    .map((x) => `${snakecase(x.name).toUpperCase()} ${x.type}`)
-    .join(", ")})`);
+
+  for (const column of columns) {
+    const values = column.values.filter((v) => v !== null && v !== undefined);
+    const types = values.map((v) => typeof v);
+
+    if (!values.length || Array.from(new Set(types)).length > 1) {
+      column.type = "VARCHAR";
+    } else {
+      if (typeof values[0] == "boolean") {
+        column.type = "BOOLEAN";
+      } else if (typeof values[0] == "number") {
+        column.type = "FLOAT";
+      } else {
+        column.type = "VARCHAR";
+      }
+    }
+  }
+
   await executeSql(
     connection,
     `CREATE OR REPLACE TABLE ${tableName} (${columns
@@ -153,6 +202,7 @@ const initTable = async (connection, tableName, records) => {
   return columns.map((x) => ({
     field: x.name,
     column: snakecase(x.name).toUpperCase(),
+    type: x.type,
   }));
 };
 
@@ -213,15 +263,15 @@ const executeSql = (connection, sql) => {
   });
 };
 
-const sqlString = (value) => {
-  if (typeof value == "string") {
-    return `'${value.replace(/'/g, '"')}'`;
-  } else if (typeof value == "number") {
-    return value.toString();
-  } else if (!value) {
-    return "NULL";
+const sqlString = (value, type) => {
+  if (type === "VARCHAR") {
+    return `'${(`${value || ""}`).replace(/'/g, '"')}'`;
+  } else if (type == "FLOAT") {
+    return (value ?? "NULL").toString();
+  } else if (type === "BOOLEAN") {
+    return !!value;
   } else {
-    return value.toString();
+    return (value ?? "NULL").toString();
   }
 };
 
