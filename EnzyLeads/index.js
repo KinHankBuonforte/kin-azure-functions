@@ -18,7 +18,7 @@ const fetchLeads = async function () {
   }
   const leads = data.output;
   const connection = await initSnowflakeConnection();
-  const tableName = "ENERFLO_LEADS";
+  const tableName = "ENZY_LEADS";
   const flattenRecords = leads.map((x) => flattenObject(x));
   const columns = await initTable(connection, tableName, flattenRecords);
 
@@ -146,7 +146,7 @@ const initSnowflakeConnection = () => {
           sqlText: "USE ROLE ACCOUNTADMIN",
           complete: () => {
             connection.execute({
-              sqlText: "USE Database ENERFLO",
+              sqlText: "USE Database ENZY_KIN",
               complete: () => {
                 connection.execute({
                   sqlText: "USE schema PUBLIC",
@@ -197,3 +197,5 @@ const sqlString = (value, type) => {
     return (value ?? "NULL").toString();
   }
 };
+
+fetchLeads();
