@@ -18,13 +18,35 @@ const fetchLeads = async function () {
   }
   const leads = data.output;
   const connection = await initSnowflakeConnection();
-  const tableName = "ENZY_LEADS";
   const flattenRecords = leads.map((x) => flattenObject(x));
-  const columns = await initTable(connection, tableName, flattenRecords);
 
-  for (let i = 0; i < flattenRecords.length; i += 100) {
-    console.log(`Inserting ${i} batch from ${flattenRecords.length}`);
-    const values = flattenRecords
+  const appointments = [];
+
+  for (const r of flattenRecords) {
+    const leadAppointments = (r.appointments ?? []).map((ap) => ({
+      ...ap,
+      leadId: r.leadId,
+    }));
+    appointments.push(...leadAppointments);
+    delete r.appointments;
+  }
+  await insertRecords(connection, flattenRecords, "ENZY_LEADS");
+
+  const flattenedAppointments = appointments.map((x) => flattenObject(x));
+  await insertRecords(connection, flattenedAppointments, "ENZY_APPOINTMENTS");
+};
+
+module.exports = async function (context, myTimer) {
+  context.log("Start fetching leads...", timeStamp);
+  await fetchLeads();
+};
+
+const insertRecords = async (connection, records, tableName) => {
+  const columns = await initTable(connection, tableName, records);
+
+  for (let i = 0; i < records.length; i += 100) {
+    console.log(`Inserting ${i} batch from ${records.length}`);
+    const values = records
       .slice(i, i + 100)
       .map(
         (record) =>
@@ -48,11 +70,6 @@ const fetchLeads = async function () {
   }
 };
 
-module.exports = async function (context, myTimer) {
-  context.log("Start fetching leads...", timeStamp);
-  await fetchLeads();
-};
-
 const flattenObject = (obj) => {
   const flattened = {};
 
@@ -71,8 +88,6 @@ const flattenObject = (obj) => {
           flattened[key + "_" + valueKey] = valueValue;
         }
       }
-    } else if (Array.isArray(value)) {
-      flattened[key] = JSON.stringify(value);
     } else {
       flattened[key] = value;
     }
@@ -197,5 +212,3 @@ const sqlString = (value, type) => {
     return (value ?? "NULL").toString();
   }
 };
-
-fetchLeads();
