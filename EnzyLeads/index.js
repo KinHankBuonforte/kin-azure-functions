@@ -124,7 +124,8 @@ const initTable = async (connection, tableName, records) => {
       if (typeof values[0] == "boolean") {
         column.type = "BOOLEAN";
       } else if (typeof values[0] == "number") {
-        column.type = "FLOAT";
+        const isFloat = values.some(v => `${v}`.includes('.'));
+        column.type = isFloat ? "FLOAT" : "INT";
       } else {
         column.type = "VARCHAR";
       }
@@ -204,7 +205,7 @@ const executeSql = (connection, sql) => {
 const sqlString = (value, type) => {
   if (type === "VARCHAR") {
     return `'${`${value || ""}`.replace(/'/g, '"')}'`;
-  } else if (type == "FLOAT") {
+  } else if (type == "FLOAT" || type == "INT") {
     return (value ?? "NULL").toString();
   } else if (type === "BOOLEAN") {
     return !!value;
