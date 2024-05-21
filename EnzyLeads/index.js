@@ -37,7 +37,7 @@ const fetchLeads = async function () {
 };
 
 module.exports = async function (context, myTimer) {
-  context.log("Start fetching leads...", timeStamp);
+  context.log("Start fetching leads...");
   await fetchLeads();
 };
 
