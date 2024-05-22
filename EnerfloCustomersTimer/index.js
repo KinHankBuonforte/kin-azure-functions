@@ -77,7 +77,7 @@ const fetchCustomers = async () => {
     });
     records.push(...res.items);
 
-    if (res.currentPage === res.totalPageCount) {
+    if (!res.totalPageCount || res.currentPage === res.totalPageCount) {
       break;
     }
     page += 1;
