@@ -1,4 +1,4 @@
-const { initSnowflakeConnection } = require("../snowflake");
+const { initSnowflakeConnection, executeSql } = require("../snowflake");
 
 module.exports = async function (context, req) {
   context.log("JavaScript HTTP trigger function processed a request.");
