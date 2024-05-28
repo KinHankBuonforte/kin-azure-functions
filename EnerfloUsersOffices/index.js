@@ -1,54 +1,11 @@
-const snowflake = require('snowflake-sdk');
-const axios = require('axios').default;
+const {
+  initSnowflakeConnection,
+  initTable,
+  insertRecords,
+  flattenObject,
+} = require("../snowflake");
 
-const initSnowflakeConnection = () => {
-    return new Promise((resolve, reject) => {
-        var connection = snowflake.createConnection({
-            account: 'ch10140.us-central1.gcp',
-            username: 'HANKB',
-            password: 'HankB123',
-            application: 'COMPUTE_WH'
-        });
-
-        connection.connect((err, conn) => {
-            if (err) {
-                reject('Unable to connect: ' + err.message);
-            } else {
-                connection.execute({
-                    sqlText: "USE ROLE ACCOUNTADMIN", complete: () => {
-                        connection.execute({
-                            sqlText: "USE Database ENERFLO", complete: () => {
-                                connection.execute({
-                                    sqlText: "USE schema PUBLIC", complete: () => {
-                                        connection.execute({
-                                            sqlText: "USE WAREHOUSE COMPUTE_WH", complete: () => {
-                                                resolve(connection); 
-                                            }
-                                        });
-                                    }
-                                });
-                            }
-                        });
-                    }
-                });
-            }
-        });
-    });
-}
-
-const executeSql = (connection, sql) => {
-    return new Promise((resolve, reject) => {
-        connection.execute({
-            sqlText: sql, complete: (err, stmt, rows) => {
-                if (err) {
-                    reject('Failed to execute statement due to the following error: ' + err.message);
-                } else {
-                    resolve(rows);
-                }
-            }
-        })
-    });
-}
+const axios = require("axios").default;
 
 const fetchUsersV2 = async () => {
   const res = await fetch(
@@ -96,191 +53,63 @@ const fetchOffices = async () => {
     let userV2Res = await fetchUsersV2();
     const inserted_at = new Date().toUTCString();
 
-    console.log("Creating Offices Table...");
+    console.log("Creating Offices...");
 
-    const OFFCIES_TABLE_QUERY = `
-          create or replace TABLE ENERFLO.PUBLIC."ENERFLO_OFFICES" (
-              "id" NUMBER(10,0) UNIQUE PRIMARY KEY,
-              "created_at" VARCHAR(16777216),
-              "name" VARCHAR(16777216),
-              "phone" VARCHAR(16777216),
-              "address" VARCHAR(16777216),
-              "city" VARCHAR(16777216),
-              "state" VARCHAR(16777216),
-              "zip" VARCHAR(16777216),
-              "crm_id" VARCHAR(16777216),
-              "inserted_at" VARCHAR(16777216)
-          );
-      `;
-    await executeSql(connection, OFFCIES_TABLE_QUERY);
+    const officeTableName = "ENERFLO_OFFICES";
+    const officeRecords = officeRes.results.map((r) => ({
+      ...flattenObject(r),
+      inserted_at,
+    }));
+    const officeColumns = await initTable(
+      connection,
+      "ENERFLO",
+      officeTableName,
+      officeRecords,
+      true
+    );
+    await insertRecords(
+      connection,
+      officeRecords,
+      officeTableName,
+      officeColumns
+    );
 
-    console.log("Inserting Offices Data...");
+    console.log("Creating Users...");
 
-    const cols = [
-      "id",
-      "created_at",
-      "name",
-      "phone",
-      "address",
-      "city",
-      "state",
-      "zip",
-      "crm_id",
-    ];
-    const OFFICES_INSERT_QUERY = `
-          INSERT OVERWRITE INTO ENERFLO.PUBLIC."ENERFLO_OFFICES" (${cols
-            .map((col) => `"${col}"`)
-            .join(",")},"inserted_at")
-          VALUES
-          ${officeRes.results
-            .map(
-              (r) =>
-                `(${cols
-                  .map((col) =>
-                    r[col] ? (col === "id" ? r.id : `'${r[col]}'`) : `null`
-                  )
-                  .join(",")},'${inserted_at}')`
-            )
-            .join(",")};
-      `;
-    await executeSql(connection, OFFICES_INSERT_QUERY);
+    const userTableName = "ENERFLO_USERS";
+    const userRecords = userRes.results.map((r) => ({
+      ...flattenObject(r),
+      inserted_at,
+    }));
+    const userColumns = await initTable(
+      connection,
+      "ENERFLO",
+      userTableName,
+      userRecords,
+      true
+    );
+    await insertRecords(connection, userRecords, userTableName, userColumns);
 
-    console.log("Creating Users Table...");
+    console.log("Creating Users V2...");
 
-    const USERS_TABLE_QUERY = `
-          create or replace TABLE ENERFLO.PUBLIC."ENERFLO_USERS" (
-              "id" NUMBER(10,0) UNIQUE PRIMARY KEY,
-              "created_at" VARCHAR(65535),
-              "name" VARCHAR(65535),
-              "email" VARCHAR(65535),
-              "phone" VARCHAR(65535),
-              "last_name" VARCHAR(65535),
-              "first_name" VARCHAR(65535),
-              "timezone" VARCHAR(65535),
-              "active" BOOLEAN,
-              "external_user_id" VARCHAR(65535),
-              "company_id" NUMBER(10,0),
-              "office_ids" VARIANT,
-              "roles" VARIANT,
-              "manager" VARIANT,
-              "inserted_at" VARCHAR(65535)
-          );
-      `;
-
-    await executeSql(connection, USERS_TABLE_QUERY);
-
-    console.log("Inserting Users Data...");
-
-    const userColumns = [
-      "id",
-      "created_at",
-      "name",
-      "email",
-      "phone",
-      "last_name",
-      "first_name",
-      "timezone",
-      "active",
-      "external_user_id",
-      "company_id",
-      "office_ids",
-      "roles",
-      "manager",
-    ];
-
-    const usersData = userRes.results
-      .map((r) => {
-        return `SELECT ${userColumns
-          .map((col) => {
-            if (!r[col]) {
-              return "null";
-            }
-            if (["id", "active", "company_id"].includes(col)) {
-              return r[col];
-            }
-            if (["office_ids", "roles"].includes(col)) {
-              return `[${r[col].map((item) => `'${item}'`).join(",")}]`;
-            }
-            if (col === "manager") {
-              const m = r.manager;
-              return `{'id': ${m.id}, 'first_name': '${m.first_name}', 'last_name': '${m.last_name}', 'email': '${m.email}', 'phone': '${m.phone}'}`;
-            }
-            return `'${r[col]}'`;
-          })
-          .join(",")}, '${inserted_at}'`;
-      })
-      .join(" UNION ALL ");
-
-    const USERS_INSERT_QUERY = `
-        INSERT OVERWRITE INTO ENERFLO.PUBLIC.ENERFLO_USERS
-          (${userColumns.map((col) => `"${col}"`).join(",")}, "inserted_at")
-        ${usersData}
-      `;
-    await executeSql(connection, USERS_INSERT_QUERY, []);
-
-    console.log("Creating Users V2 Table...");
-
-    const USERS_V2_TABLE_QUERY = `
-          create or replace TABLE ENERFLO.PUBLIC."ENERFLO_USERS_V2" (
-              "id" NUMBER(10,0) UNIQUE PRIMARY KEY,
-              "created_at" VARCHAR(65535),
-              "name" VARCHAR(65535),
-              "email" VARCHAR(65535),
-              "phone" VARCHAR(65535),
-              "office" VARCHAR(65535),
-              "inactive" BOOLEAN,
-              "agent_office" VARCHAR(65535),
-              "combined_offices" VARCHAR(65535),
-              "roles" VARIANT,
-              "last_login_date" VARCHAR(65535),
-              "inserted_at" VARCHAR(65535)
-          );
-      `;
-
-    await executeSql(connection, USERS_V2_TABLE_QUERY);
-
-    console.log("Inserting Users V2 Data...");
-
-    const userV2Columns = [
-      "id",
-      "created_at",
-      "name",
-      "email",
-      "phone",
-      "inactive",
-      "agent_office",
-      "office",
-      "combined_offices",
-      "roles",
-      "last_login_date",
-    ];
-
-    const usersV2Data = userV2Res.data
-      .map((r) => {
-        return `SELECT ${userV2Columns
-          .map((col) => {
-            if (!r[col]) {
-              return "null";
-            }
-            if (["id", "inactive"].includes(col)) {
-              return r[col];
-            }
-            if (["roles"].includes(col)) {
-              return `[${r[col].map((item) => `'${item}'`).join(",")}]`;
-            }
-            return `'${r[col]}'`;
-          })
-          .join(",")}, '${inserted_at}'`;
-      })
-      .join(" UNION ALL ");
-
-    const USERS_V2_INSERT_QUERY = `
-        INSERT OVERWRITE INTO ENERFLO.PUBLIC.ENERFLO_USERS_V2
-          (${userV2Columns.map((col) => `"${col}"`).join(",")}, "inserted_at")
-        ${usersV2Data}
-      `;
-    await executeSql(connection, USERS_V2_INSERT_QUERY);
-
+    const userV2TableName = "ENERFLO_USERS_V2";
+    const userV2Records = userV2Res.data.map((r) => ({
+      ...flattenObject(r),
+      inserted_at,
+    }));
+    const userV2Columns = await initTable(
+      connection,
+      "ENERFLO",
+      userV2TableName,
+      userV2Records,
+      true
+    );
+    await insertRecords(
+      connection,
+      userV2Records,
+      userV2TableName,
+      userV2Columns
+    );
     console.log("Finished FIKA data");
   } catch (err) {
     console.error(err);

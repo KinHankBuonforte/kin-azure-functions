@@ -1,5 +1,5 @@
-const snowflake = require("snowflake-sdk");
 const { default: axios } = require("axios");
+const { executeSql, initSnowflakeConnection } = require("../snowflake");
 
 const api = axios.create({
   baseURL: "https://enerflo.io/api",
@@ -142,64 +142,6 @@ const map_value = (value) => {
   }
 };
 
-const initSnowflakeConnection = () => {
-  return new Promise((resolve, reject) => {
-    var connection = snowflake.createConnection({
-      account: process.env.SNOWFLAKE_ACCOUNT,
-      username: process.env.SNOWFLAKE_USERNAME,
-      password: process.env.SNOWFLAKE_PASSWORD,
-      application: process.env.SNOWFLAKE_APP,
-    });
-
-    connection.connect((err, conn) => {
-      if (err) {
-        reject("Unable to connect: " + err.message);
-      } else {
-        connection.execute({
-          sqlText: "USE ROLE ACCOUNTADMIN",
-          complete: () => {
-            connection.execute({
-              sqlText: "USE Database ENERFLO",
-              complete: () => {
-                connection.execute({
-                  sqlText: "USE schema PUBLIC",
-                  complete: () => {
-                    connection.execute({
-                      sqlText: "USE WAREHOUSE COMPUTE_WH",
-                      complete: () => {
-                        resolve(connection);
-                      },
-                    });
-                  },
-                });
-              },
-            });
-          },
-        });
-      }
-    });
-  });
-};
-
-const executeSql = async (connection, sql, binds) => {
-  return new Promise((resolve, reject) => {
-    connection.execute({
-      sqlText: sql,
-      binds: binds,
-      complete: (err, stmt, rows) => {
-        if (err) {
-          reject(
-            "Failed to execute statement due to the following error: " +
-              err.message
-          );
-        } else {
-          resolve(rows);
-        }
-      },
-    });
-  });
-};
-
 const processWebhooks = async function (context, myTimer) {
   var timeStamp = new Date().toISOString();
 
@@ -212,14 +154,12 @@ const processWebhooks = async function (context, myTimer) {
   );
   for (const e of events) {
     try {
-      e.PARAMS = JSON.parse(e.PARAMS.replace(/\s+/g," "));
+      e.PARAMS = JSON.parse(e.PARAMS.replace(/\s+/g, " "));
       const { webhook_event, id } = e.PARAMS;
       console.log(`${e.ID}: ${webhook_event} - ${id}`);
       await handle_webhook(e, connection);
     } catch (err) {
       console.error("Failed to parse event:", e.ID);
-      // console.log(e.PARAMS);
-      // throw err;
     }
   }
 };

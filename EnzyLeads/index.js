@@ -3,6 +3,7 @@ const {
   initSnowflakeConnection,
   flattenObject,
   insertRecords,
+  initTable,
 } = require("../snowflake");
 
 const api = axios.default.create({
@@ -21,11 +22,10 @@ const fetchLeads = async function () {
   }
   const leads = data.output;
   const connection = await initSnowflakeConnection("ENZY_KIN");
-  const flattenRecords = leads.map((x) => flattenObject(x));
 
   const appointments = [];
 
-  for (const r of flattenRecords) {
+  for (const r of leads) {
     const leadAppointments = (r.appointments ?? []).map((ap) => ({
       ...ap,
       leadId: r.leadId,
@@ -33,10 +33,36 @@ const fetchLeads = async function () {
     appointments.push(...leadAppointments);
     delete r.appointments;
   }
-  await insertRecords(connection, flattenRecords, "ENZY_LEADS");
+  const flattenLeadRecords = leads.map((x) => flattenObject(x));
+
+  const leadColumns = await initTable(
+    connection,
+    "ENZY_KIN",
+    "ENZY_LEADS",
+    flattenLeadRecords,
+    true
+  );
+  await insertRecords(
+    connection,
+    flattenLeadRecords,
+    "ENZY_LEADS",
+    leadColumns
+  );
 
   const flattenedAppointments = appointments.map((x) => flattenObject(x));
-  await insertRecords(connection, flattenedAppointments, "ENZY_APPOINTMENTS");
+  const appointmentColumns = await initTable(
+    connection,
+    "ENZY_KIN",
+    "ENZY_APPOINTMENTS",
+    flattenedAppointments,
+    true
+  );
+  await insertRecords(
+    connection,
+    flattenedAppointments,
+    "ENZY_APPOINTMENTS",
+    appointmentColumns
+  );
 };
 
 module.exports = async function (context, myTimer) {
