@@ -40,6 +40,7 @@ const fetchLeads = async function () {
     "ENZY_KIN",
     "ENZY_LEADS",
     flattenLeadRecords,
+    null,
     true
   );
   await insertRecords(
@@ -55,6 +56,7 @@ const fetchLeads = async function () {
     "ENZY_KIN",
     "ENZY_APPOINTMENTS",
     flattenedAppointments,
+    null,
     true
   );
   await insertRecords(
