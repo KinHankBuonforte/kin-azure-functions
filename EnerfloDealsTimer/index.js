@@ -5,6 +5,7 @@ const {
   initTable,
   insertRecords,
   flattenObject,
+  getColumnsConfig,
 } = require("../snowflake");
 
 const client = new GraphQLClient("https://kinhome.enerflo.io/graphql", {
@@ -19,16 +20,22 @@ const fetchDeals = async () => {
   const records = [];
   const tableName = "ENERFLO_DEALS";
   const connection = await initSnowflakeConnection();
-
+  const [columnsConfig, forceCreateTable] = await getColumnsConfig(
+    connection,
+    "ENERFLO",
+    tableName
+  );
   let lastDate;
 
-  try {
-    const qLastDate = await executeSql(
-      connection,
-      `SELECT MAX(UPDATED_AT) FROM ${tableName}`
-    );
-    lastDate = qLastDate[0]?.["MAX(UPDATED_AT)"];
-  } catch (err) {}
+  if (!forceCreateTable) {
+    try {
+      const qLastDate = await executeSql(
+        connection,
+        `SELECT MAX(UPDATED_AT) FROM ${tableName}`
+      );
+      lastDate = qLastDate[0]?.["MAX(UPDATED_AT)"];
+    } catch (err) {}
+  }
 
   while (1) {
     const document = gql`
@@ -139,7 +146,9 @@ const fetchDeals = async () => {
     connection,
     "ENERFLO",
     tableName,
-    flattenRecords
+    flattenRecords,
+    columnsConfig,
+    forceCreateTable
   );
   await insertRecords(connection, flattenRecords, tableName, columns);
 };

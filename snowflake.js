@@ -1,5 +1,6 @@
 const snowflake = require("snowflake-sdk");
 const snakecase = require("snakecase");
+const { fetchColumns } = require("./fetch-columns");
 
 const initSnowflakeConnection = (dbName = "ENERFLO") => {
   return new Promise((resolve, reject) => {
@@ -118,23 +119,37 @@ const initTable = async (
   dbName,
   tableName,
   records,
+  columnsConfig,
   forceCreateTable = false,
   idField = "id"
 ) => {
   console.log("Table Configuration: ", dbName, tableName);
 
   let columns = [];
+
   for (const record of records) {
     for (let key of Object.keys(record)) {
       const value = record[key];
       const column = columns.find((c) => c.field === key);
+      let columnName = snakecase(key).toUpperCase();
+
+      if (columnsConfig) {
+        const config = columnsConfig.find(
+          (c) => c.originalColumnName.toUpperCase() === columnName
+        );
+
+        if (!config) {
+          continue;
+        }
+        columnName = config.newName.toUpperCase();
+      }
 
       if (column) {
         column.values.push(value);
       } else {
         columns.push({
           field: key,
-          column: snakecase(key).toUpperCase(),
+          column: columnName,
           values: [value],
         });
       }
@@ -162,17 +177,14 @@ const initTable = async (
   const tableExists = await checkTableExists(connection, dbName, tableName);
 
   if (tableExists && !forceCreateTable) {
-    let existingColumns = [];
-
-    try {
-      existingColumns = await executeSql(
-        connection,
-        `SHOW COLUMNS IN TABLE ${dbName}.PUBLIC.${tableName}`
-      );
-    } catch (err) {}
+    const existingColumns = await getExistingColumns(
+      connection,
+      dbName,
+      tableName
+    );
 
     for (let column of columns) {
-      if (!existingColumns.some((x) => x.column_name === column.column)) {
+      if (!existingColumns.some((x) => x === column.column)) {
         await executeSql(
           connection,
           `ALTER TABLE ${tableName} ADD ${column.column} ${column.type}`
@@ -208,12 +220,63 @@ const sqlString = (value, type) => {
   }
 };
 
+const getExistingColumns = async (connection, dbName, tableName) => {
+  try {
+    const existingColumns = await executeSql(
+      connection,
+      `SHOW COLUMNS IN TABLE ${dbName}.PUBLIC.${tableName}`
+    );
+    return existingColumns.map((c) => c.column_name);
+  } catch (err) {
+    return [];
+  }
+};
+
 const checkTableExists = async (connection, dbName, tableName) => {
-  const existingColumns = await executeSql(
+  const existingColumns = await getExistingColumns(
     connection,
-    `SELECT COLUMN_NAME FROM ${dbName}.INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME='${tableName}'`
+    dbName,
+    tableName
   );
   return existingColumns.length > 0;
+};
+
+const getColumnsConfig = async (
+  connection,
+  dbName,
+  tableId,
+  requiredColumns = ["ID"]
+) => {
+  if (process.env.FRESH_RUN) {
+    return [null, true];
+  }
+  try {
+    const {
+      data: { config, columns },
+    } = await fetchColumns(dbName, tableId);
+    const existingColumns = await getExistingColumns(
+      connection,
+      dbName,
+      tableId
+    );
+    const columnsConfig = [...requiredColumns, ...columns]
+      .map((c) => ({
+        originalColumnName: c,
+        newName: config[c]?.name ?? c,
+        excluded: config[c]?.excluded ?? false,
+      }))
+      .filter((c) => !c.excluded);
+
+    const forceUpdate =
+      existingColumns.sort((a, b) => (a > b ? 1 : -1)).join(",") !==
+      columnsConfig
+        .map((c) => c.newName)
+        .sort((a, b) => (a > b ? 1 : -1))
+        .join(",");
+    return [columnsConfig, forceUpdate];
+  } catch (err) {
+    throw err?.response?.data ?? err?.response ?? err;
+  }
 };
 
 module.exports = {
@@ -224,4 +287,5 @@ module.exports = {
   sqlString,
   flattenObject,
   checkTableExists,
+  getColumnsConfig,
 };

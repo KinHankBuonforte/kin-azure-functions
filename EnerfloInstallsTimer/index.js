@@ -2,9 +2,9 @@ const {
   initSnowflakeConnection,
   flattenObject,
   initTable,
-  checkTableExists,
   insertRecords,
   executeSql,
+  getColumnsConfig,
 } = require("../snowflake");
 
 const axios = require("axios").default;
@@ -27,10 +27,13 @@ module.exports = async function (context, myTimer) {
 
   const pages = 1;
   const records = [];
+  const [columnsConfig, forceCreateTable] = await getColumnsConfig(
+    connection,
+    "ENERFLO",
+    tableName
+  );
 
-  const tableExists = await checkTableExists(connection, "ENERFLO", tableName);
-
-  if (tableExists) {
+  if (forceCreateTable) {
     const maxIdInfo = await executeSql(
       connection,
       `SELECT MAX(ID) FROM ${tableName}`
@@ -77,7 +80,8 @@ module.exports = async function (context, myTimer) {
     "ENERFLO",
     tableName,
     flattenRecords,
-    table
+    columnsConfig,
+    forceCreateTable
   );
   await insertRecords(connection, flattenRecords, tableName, columns);
 

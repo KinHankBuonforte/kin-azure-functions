@@ -1,10 +1,10 @@
 const {
   initSnowflakeConnection,
-  checkTableExists,
   flattenObject,
   initTable,
   insertRecords,
   executeSql,
+  getColumnsConfig,
 } = require("../snowflake");
 const axios = require("axios").default;
 
@@ -18,8 +18,13 @@ module.exports = async function (context, myTimer) {
 
   // get records
   const connection = await initSnowflakeConnection();
-
   const tableName = "ENERFLO_APPOINTMENTS";
+  const [columnsConfig, forceCreateTable] = await getColumnsConfig(
+    connection,
+    "ENERFLO",
+    tableName
+  );
+
   const url =
     "https://enerflo.io/api/v1/appointments?api_key=13686046e8dc420946.70185370";
   const pageSize = 1000;
@@ -30,9 +35,7 @@ module.exports = async function (context, myTimer) {
   const pages = Math.ceil(dataCount / pageSize);
   const records = [];
 
-  const tableExists = await checkTableExists(connection, "ENERFLO", tableName);
-
-  if (tableExists) {
+  if (!forceCreateTable) {
     const maxIdInfo = await executeSql(
       connection,
       `SELECT MAX(ID) FROM ${tableName}`
@@ -78,7 +81,9 @@ module.exports = async function (context, myTimer) {
     connection,
     "ENERFLO",
     tableName,
-    flattenRecords
+    flattenRecords,
+    columnsConfig,
+    forceCreateTable
   );
   await insertRecords(connection, records, tableName, columns);
 

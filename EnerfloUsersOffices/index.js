@@ -3,6 +3,7 @@ const {
   initTable,
   insertRecords,
   flattenObject,
+  getColumnsConfig,
 } = require("../snowflake");
 
 const axios = require("axios").default;
@@ -56,6 +57,12 @@ const fetchOffices = async () => {
     console.log("Creating Offices...");
 
     const officeTableName = "ENERFLO_OFFICES";
+    const [officeColumnsConfig] = await getColumnsConfig(
+      connection,
+      "enerflo",
+      officeTableName,
+      ["ID", "INSERTED_AT"]
+    );
     const officeRecords = officeRes.results.map((r) => ({
       ...flattenObject(r),
       inserted_at,
@@ -65,6 +72,7 @@ const fetchOffices = async () => {
       "ENERFLO",
       officeTableName,
       officeRecords,
+      officeColumnsConfig,
       true
     );
     await insertRecords(
@@ -77,6 +85,12 @@ const fetchOffices = async () => {
     console.log("Creating Users...");
 
     const userTableName = "ENERFLO_USERS";
+    const [userColumnsConfig] = await getColumnsConfig(
+      connection,
+      "enerflo",
+      userTableName,
+      ["ID", "INSERTED_AT"]
+    );
     const userRecords = userRes.results.map((r) => ({
       ...flattenObject(r),
       inserted_at,
@@ -86,6 +100,7 @@ const fetchOffices = async () => {
       "ENERFLO",
       userTableName,
       userRecords,
+      userColumnsConfig,
       true
     );
     await insertRecords(connection, userRecords, userTableName, userColumns);
@@ -93,6 +108,12 @@ const fetchOffices = async () => {
     console.log("Creating Users V2...");
 
     const userV2TableName = "ENERFLO_USERS_V2";
+    const [userV2ColumnsConfig] = await getColumnsConfig(
+      connection,
+      "enerflo",
+      userV2TableName,
+      ["ID", "INSERTED_AT"]
+    );
     const userV2Records = userV2Res.data.map((r) => ({
       ...flattenObject(r),
       inserted_at,
@@ -102,6 +123,7 @@ const fetchOffices = async () => {
       "ENERFLO",
       userV2TableName,
       userV2Records,
+      userV2ColumnsConfig,
       true
     );
     await insertRecords(
