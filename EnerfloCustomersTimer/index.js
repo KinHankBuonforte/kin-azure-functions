@@ -107,7 +107,7 @@ const fetchCustomers = async () => {
     columnsConfig,
     forceCreateTable
   );
-  await insertRecords(connection, flattenRecords, tableName, columns);
+  await insertRecords(connection, flattenRecords, tableName, columns, forceCreateTable);
 };
 
 module.exports = async function (context, myTimer) {

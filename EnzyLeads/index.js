@@ -47,7 +47,8 @@ const fetchLeads = async function () {
     connection,
     flattenLeadRecords,
     "ENZY_LEADS",
-    leadColumns
+    leadColumns,
+    true
   );
 
   const flattenedAppointments = appointments.map((x) => flattenObject(x));
@@ -63,7 +64,8 @@ const fetchLeads = async function () {
     connection,
     flattenedAppointments,
     "ENZY_APPOINTMENTS",
-    appointmentColumns
+    appointmentColumns,
+    true
   );
 };
 

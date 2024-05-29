@@ -59,7 +59,13 @@ const executeSql = (connection, sql) => {
   });
 };
 
-const insertRecords = async (connection, records, tableName, columns) => {
+const insertRecords = async (
+  connection,
+  records,
+  tableName,
+  columns,
+  newTable = true
+) => {
   for (let i = 0; i < records.length; i += 100) {
     console.log(`Inserting ${i} batch from ${records.length}`);
     const values = records
@@ -75,13 +81,32 @@ const insertRecords = async (connection, records, tableName, columns) => {
     try {
       await executeSql(
         connection,
-        `INSERT INTO ${tableName} (${columns
+        `INSERT INTO ${tableName}${newTable ? "_TEMP" : ""} (${columns
           .map((c) => c.column)
           .join(", ")}) VALUES ${values}`
       );
     } catch (err) {
       console.error(err);
       break;
+    }
+  }
+
+  if (newTable) {
+    try {
+      console.log(`${tableName}: drop`);
+      await executeSql(connection, `DROP TABLE ${tableName}`);
+    } catch (err) {
+      console.error(`${tableName} drop failed:`, err);
+    }
+
+    try {
+      console.log(`${tableName}_TEMP: moving to current`);
+      await executeSql(
+        connection,
+        `ALTER TABLE ${tableName}_TEMP RENAME TO ${tableName}`
+      );
+    } catch (err) {
+      console.error(`${tableName}_TEMPS rename failed:`, err);
     }
   }
 };
@@ -174,9 +199,7 @@ const initTable = async (
     }
   }
 
-  const tableExists = await checkTableExists(connection, dbName, tableName);
-
-  if (tableExists && !forceCreateTable) {
+  if (!forceCreateTable) {
     const existingColumns = await getExistingColumns(
       connection,
       dbName,
@@ -200,7 +223,7 @@ const initTable = async (
   } else {
     await executeSql(
       connection,
-      `CREATE OR REPLACE TABLE ${tableName} (${columns
+      `CREATE OR REPLACE TABLE ${tableName}_TEMP (${columns
         .map((x) => `${x.column} ${x.type}`)
         .join(", ")})`
     );

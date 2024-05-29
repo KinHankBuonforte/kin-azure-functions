@@ -85,7 +85,7 @@ module.exports = async function (context, myTimer) {
     columnsConfig,
     forceCreateTable
   );
-  await insertRecords(connection, records, tableName, columns);
+  await insertRecords(connection, records, tableName, columns, forceCreateTable);
 
   context.res = {
     status: 200 /* Defaults to 200 */,
