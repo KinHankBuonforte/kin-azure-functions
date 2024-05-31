@@ -130,5 +130,7 @@ async function sendAlert(tables) {
 }
 
 module.exports = async function (context, myTimer) {
+  console.log = context.log;
+  console.error = context.error;
   await checkTablesLastUpdate();
 };
