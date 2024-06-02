@@ -35,7 +35,7 @@ const dbTables = [
   },
 ];
 
-async function checkTablesLastUpdate() {
+async function checkTablesLastUpdate(context) {
   const untouchedTables = [];
 
   for (const database of dbTables) {
@@ -54,7 +54,7 @@ async function checkTablesLastUpdate() {
         const timeSince = moment()
           .utc()
           .diff(moment(LAST_ALTERED).utc(), "minutes");
-        console.log(`${TABLE_NAME}: Last update ${timeSince} minutes ago`);
+        context.log(`${TABLE_NAME}: Last update ${timeSince} minutes ago`);
         if (timeSince > 120) {
           untouchedTables.push({
             table: TABLE_NAME,
@@ -64,10 +64,10 @@ async function checkTablesLastUpdate() {
       }
       connection.destroy();
     } catch (err) {
-      console.error(err);
+      context.error(err);
     }
   }
-  console.log(untouchedTables);
+  context.log(untouchedTables);
 
   if (!untouchedTables.length) {
     return;
@@ -102,14 +102,16 @@ async function sendAlert(tables) {
               </tr>
             </thead>
             <tbody>
-              ${tables.map(
-                (t) =>
-                  `<tr>
+              ${tables
+                .map(
+                  (t) =>
+                    `<tr>
                     <td>${t.table}</td>
                     <td>${t.timeSince} minutes ago</td>
                   </tr>
                 `
-              )}
+                )
+                .join("")}
             </tbody>
           </table>
         </html>
@@ -130,7 +132,5 @@ async function sendAlert(tables) {
 }
 
 module.exports = async function (context, myTimer) {
-  console.log = context.log;
-  console.error = context.error;
-  await checkTablesLastUpdate();
+  await checkTablesLastUpdate(context);
 };
