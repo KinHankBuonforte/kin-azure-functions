@@ -31,6 +31,7 @@ const dbTables = [
       "QUICKBASE_PROJECTS",
       "QUICKBASE_RETENSION",
       "QUICKBASE_SALES_AID",
+      "QUICKBASE_INTAKE_EVENTS",
     ],
   },
 ];
