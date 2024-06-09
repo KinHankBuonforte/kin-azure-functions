@@ -1,12 +1,5 @@
 const { gql, GraphQLClient } = require("graphql-request");
-const {
-  initSnowflakeConnection,
-  executeSql,
-  initTable,
-  flattenObject,
-  insertRecords,
-  getColumnsConfig,
-} = require("../snowflake");
+const { flattenObject, Snowflake } = require("../snowflake");
 
 const client = new GraphQLClient("https://kinhome.enerflo.io/graphql", {
   headers: {
@@ -15,15 +8,13 @@ const client = new GraphQLClient("https://kinhome.enerflo.io/graphql", {
   },
 });
 
-const fetchCustomers = async () => {
+const fetchCustomers = async (context) => {
   let page = 1;
   const records = [];
 
-  const connection = await initSnowflakeConnection();
+  const snowflake = await Snowflake.create(context);
   const tableName = "ENERFLO_CUSTOMERS";
-  const [columnsConfig, forceCreateTable] = await getColumnsConfig(
-    connection,
-    "ENERFLO",
+  const [columnsConfig, forceCreateTable] = await snowflake.getColumnsConfig(
     tableName
   );
 
@@ -31,8 +22,7 @@ const fetchCustomers = async () => {
 
   if (!forceCreateTable) {
     try {
-      const qLastDate = await executeSql(
-        connection,
+      const qLastDate = await snowflake.execute(
         `SELECT MAX(UPDATED_AT) FROM ${tableName}`
       );
       lastDate = qLastDate[0]?.["MAX(UPDATED_AT)"];
@@ -94,20 +84,19 @@ const fetchCustomers = async () => {
     page += 1;
   }
   if (!records.length) {
-    console.log("No records to insert");
+    context.log("No records to insert");
     return;
   }
-  console.log(`${records.length} records to insert`);
+  context.log(`${records.length} records to insert`);
+
   const flattenRecords = records.map((x) => flattenObject(x));
-  const columns = await initTable(
-    connection,
-    "ENERFLO",
+  const columns = await snowflake.createOrUpdateTable(
     tableName,
     flattenRecords,
     columnsConfig,
     forceCreateTable
   );
-  await insertRecords(connection, flattenRecords, tableName, columns, forceCreateTable);
+  await snowflake.insert(flattenRecords, tableName, columns, forceCreateTable);
 };
 
 module.exports = async function (context, myTimer) {
@@ -119,13 +108,15 @@ module.exports = async function (context, myTimer) {
   context.log("JavaScript timer trigger function ran!", timeStamp);
 
   try {
-    await fetchCustomers();
+    await fetchCustomers(context);
 
     context.res = {
       status: 200 /* Defaults to 200 */,
     };
   } catch (err) {
-    console.error(err);
+    context.error(err);
     throw err;
   }
 };
+
+// module.exports(console, {});

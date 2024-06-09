@@ -1,10 +1,4 @@
-const {
-  initSnowflakeConnection,
-  initTable,
-  insertRecords,
-  flattenObject,
-  getColumnsConfig,
-} = require("../snowflake");
+const { flattenObject, Snowflake } = require("../snowflake");
 
 const axios = require("axios").default;
 
@@ -39,11 +33,11 @@ const fetchUsersV2 = async () => {
   return await res.json();
 };
 
-const fetchOffices = async () => {
-  const connection = await initSnowflakeConnection();
+const fetchOffices = async (context) => {
+  const snowflake = await Snowflake.create(context);
 
   try {
-    console.log("Fetching FIKA data...");
+    context.log("Fetching FIKA data...");
 
     const { data: officeRes } = await axios.get(
       `https://enerflo.io/api/v3/offices?api_key=13686046e8dc420946.70185370`
@@ -52,91 +46,53 @@ const fetchOffices = async () => {
       `https://enerflo.io/api/v3/users?api_key=13686046e8dc420946.70185370`
     );
     let userV2Res = await fetchUsersV2();
-    const inserted_at = new Date().toUTCString();
 
-    console.log("Creating Offices...");
+    context.log("Creating Offices...");
 
     const officeTableName = "ENERFLO_OFFICES";
-    const [officeColumnsConfig] = await getColumnsConfig(
-      connection,
-      "enerflo",
-      officeTableName,
-      ["ID", "INSERTED_AT"]
+    const [officeColumnsConfig] = await snowflake.getColumnsConfig(
+      officeTableName
     );
-    const officeRecords = officeRes.results.map((r) => ({
-      ...flattenObject(r),
-      inserted_at,
-    }));
-    const officeColumns = await initTable(
-      connection,
-      "ENERFLO",
+    const officeRecords = officeRes.results.map((r) => flattenObject(r));
+    const officeColumns = await snowflake.createOrUpdateTable(
       officeTableName,
       officeRecords,
       officeColumnsConfig,
       true
     );
-    await insertRecords(
-      connection,
-      officeRecords,
-      officeTableName,
-      officeColumns
-    );
+    await snowflake.insert(officeRecords, officeTableName, officeColumns);
 
-    console.log("Creating Users...");
+    context.log("Creating Users...");
 
     const userTableName = "ENERFLO_USERS";
-    const [userColumnsConfig] = await getColumnsConfig(
-      connection,
-      "enerflo",
-      userTableName,
-      ["ID", "INSERTED_AT"]
-    );
-    const userRecords = userRes.results.map((r) => ({
-      ...flattenObject(r),
-      inserted_at,
-    }));
-    const userColumns = await initTable(
-      connection,
-      "ENERFLO",
+    const [userColumnsConfig] = await snowflake.getColumnsConfig(userTableName);
+    const userRecords = userRes.results.map((r) => flattenObject(r));
+    const userColumns = await snowflake.createOrUpdateTable(
       userTableName,
       userRecords,
       userColumnsConfig,
       true
     );
-    await insertRecords(connection, userRecords, userTableName, userColumns);
+    await snowflake.insert(userRecords, userTableName, userColumns);
 
-    console.log("Creating Users V2...");
+    context.log("Creating Users V2...");
 
     const userV2TableName = "ENERFLO_USERS_V2";
-    const [userV2ColumnsConfig] = await getColumnsConfig(
-      connection,
-      "enerflo",
-      userV2TableName,
-      ["ID", "INSERTED_AT"]
+    const [userV2ColumnsConfig] = await snowflake.getColumnsConfig(
+      userV2TableName
     );
-    const userV2Records = userV2Res.data.map((r) => ({
-      ...flattenObject(r),
-      inserted_at,
-    }));
-    const userV2Columns = await initTable(
-      connection,
-      "ENERFLO",
+    const userV2Records = userV2Res.data.map((r) => flattenObject(r));
+    const userV2Columns = await snowflake.createOrUpdateTable(
       userV2TableName,
       userV2Records,
       userV2ColumnsConfig,
       true
     );
-    await insertRecords(
-      connection,
-      userV2Records,
-      userV2TableName,
-      userV2Columns
-    );
-    console.log("Finished FIKA data");
+    await snowflake.insert(userV2Records, userV2TableName, userV2Columns);
+    context.log("Finished FIKA data");
   } catch (err) {
-    console.error(err);
+    context.error(err);
   }
-  await connection.destroy();
 };
 
 module.exports = async function (context, myTimer) {
@@ -147,5 +103,7 @@ module.exports = async function (context, myTimer) {
   }
   context.log("JavaScript timer trigger function ran!", timeStamp);
 
-  await fetchOffices();
+  await fetchOffices(context);
 };
+
+module.exports(console, {});

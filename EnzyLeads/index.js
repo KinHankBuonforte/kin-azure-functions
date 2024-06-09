@@ -1,10 +1,5 @@
+const { flattenObject, Snowflake } = require("../snowflake");
 const axios = require("axios");
-const {
-  initSnowflakeConnection,
-  flattenObject,
-  insertRecords,
-  initTable,
-} = require("../snowflake");
 
 const api = axios.default.create({
   baseURL: "https://enzyhr.com",
@@ -13,7 +8,7 @@ const api = axios.default.create({
   },
 });
 
-const fetchLeads = async function () {
+const fetchLeads = async function (context) {
   const { data } = await api.get("/rest/externalApi/leads");
 
   if (!data.success || !data.output) {
@@ -21,8 +16,7 @@ const fetchLeads = async function () {
     return;
   }
   const leads = data.output;
-  const connection = await initSnowflakeConnection("ENZY_KIN");
-
+  const snowflake = await Snowflake.create(context, "ENZY_KIN");
   const appointments = [];
 
   for (const r of leads) {
@@ -35,33 +29,22 @@ const fetchLeads = async function () {
   }
   const flattenLeadRecords = leads.map((x) => flattenObject(x));
 
-  const leadColumns = await initTable(
-    connection,
-    "ENZY_KIN",
+  const leadColumns = await snowflake.createOrUpdateTable(
     "ENZY_LEADS",
     flattenLeadRecords,
     null,
     true
   );
-  await insertRecords(
-    connection,
-    flattenLeadRecords,
-    "ENZY_LEADS",
-    leadColumns,
-    true
-  );
+  await snowflake.insert(flattenLeadRecords, "ENZY_LEADS", leadColumns, true);
 
   const flattenedAppointments = appointments.map((x) => flattenObject(x));
-  const appointmentColumns = await initTable(
-    connection,
-    "ENZY_KIN",
+  const appointmentColumns = await snowflake.createOrUpdateTable(
     "ENZY_APPOINTMENTS",
     flattenedAppointments,
     null,
     true
   );
-  await insertRecords(
-    connection,
+  await snowflake.insert(
     flattenedAppointments,
     "ENZY_APPOINTMENTS",
     appointmentColumns,
@@ -71,5 +54,5 @@ const fetchLeads = async function () {
 
 module.exports = async function (context, myTimer) {
   context.log("Start fetching leads...");
-  await fetchLeads();
+  await fetchLeads(context);
 };

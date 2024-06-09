@@ -1,5 +1,5 @@
+const { Snowflake } = require("../snowflake");
 const { default: axios } = require("axios");
-const { executeSql, initSnowflakeConnection } = require("../snowflake");
 
 const api = axios.create({
   baseURL: "https://enerflo.io/api",
@@ -48,27 +48,25 @@ const field_mappings = {
  *
  * @param {*} event
  */
-const handle_webhook = async (event, connection) => {
+const handle_webhook = async (event, snowflake) => {
   const { webhook_event, id } = event.PARAMS;
 
   const [type, entry] = webhook_event.split("_");
 
   try {
     if (type === "new") {
-      const d = await executeSql(
-        connection,
+      const d = await snowflake.execute(
         `SELECT ID FROM ENERFLO_${entry.toUpperCase()}S WHERE ID = ${id}`
       );
       if (d.length) {
-        await complete_webhook(event, connection);
+        await complete_webhook(event, snowflake);
       }
     } else if (type === "update") {
-      const [d] = await executeSql(
-        connection,
+      const [d] = await snowflake.execute(
         `SELECT * FROM ENERFLO_${entry.toUpperCase()}S WHERE ID = ${id}`
       );
       if (!d) {
-        await complete_webhook(event, connection);
+        await complete_webhook(event, snowflake);
         return;
       }
       const api_url =
@@ -90,40 +88,39 @@ const handle_webhook = async (event, connection) => {
             nested_keys[0] === "scheduled_end_time"
           ) {
             return `${value} = ${map_value(
-              data[nested_keys[0]].date
-                .replace(".000000", "+00:00")
-                .replace(" ", "T")
+              data?.[nested_keys[0]]?.date
+                ? data[nested_keys[0]].date
+                    .replace(".000000", "+00:00")
+                    .replace(" ", "T")
+                : null
             )}`;
           }
 
           return `${value} = ${map_value(
             nested_keys.length === 2
-              ? data[nested_keys[0]][[nested_keys[1]]]
-              : data[nested_keys[0]]
+              ? data?.[nested_keys[0]]?.[[nested_keys[1]]] ?? null
+              : data?.[nested_keys[0]] ?? null
           )}`;
         })
         .join(", ");
-      await executeSql(
-        connection,
+      await snowflake.execute(
         `UPDATE ENERFLO_${entry.toUpperCase()}S SET ${new_data} WHERE ID = ${id}`
       );
-      await complete_webhook(event, connection);
+      await complete_webhook(event, snowflake);
     } else if (type === "delete") {
-      await executeSql(
-        connection,
+      await snowflake.execute(
         `DELETE FROM ENERFLO_${entry.toUpperCase()}S WHERE ID = ${id}`
       );
-      await complete_webhook(event, connection);
+      await complete_webhook(event, snowflake);
     }
   } catch (err) {
-    console.error(`${webhook_event}: ${id}`);
+    snowflake.context.error(`${webhook_event}: ${id}`);
     throw err;
   }
 };
 
-const complete_webhook = async (event, connection) => {
-  await executeSql(
-    connection,
+const complete_webhook = async (event, snowflake) => {
+  await snowflake.execute(
     `UPDATE ENERFLO_WEBHOOK_EVENTS_NEW SET PROCESSED = TRUE WHERE ID = ${event.ID}`
   );
 };
@@ -147,21 +144,22 @@ const processWebhooks = async function (context, myTimer) {
 
   context.log("JavaScript timer trigger function ran!", timeStamp);
 
-  const connection = await initSnowflakeConnection();
-  const events = await executeSql(
-    connection,
+  const snowflake = await Snowflake.create();
+  const events = await snowflake.execute(
     "SELECT * FROM ENERFLO_WEBHOOK_EVENTS_NEW WHERE PROCESSED = FALSE ORDER BY ID ASC"
   );
   for (const e of events) {
     try {
       e.PARAMS = JSON.parse(e.PARAMS.replace(/\s+/g, " "));
       const { webhook_event, id } = e.PARAMS;
-      console.log(`${e.ID}: ${webhook_event} - ${id}`);
-      await handle_webhook(e, connection);
+      context.log(`${e.ID}: ${webhook_event} - ${id}`);
+      await handle_webhook(e, snowflake);
     } catch (err) {
-      console.error("Failed to parse event:", e.ID);
+      context.error("Failed to parse event:", e.ID, err);
     }
   }
 };
 
 module.exports = processWebhooks;
+
+module.exports(console, {});

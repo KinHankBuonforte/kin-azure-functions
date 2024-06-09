@@ -1,8 +1,7 @@
-require("dotenv").config();
+const { Snowflake } = require("../snowflake");
 const moment = require("moment");
 const { EmailClient } = require("@azure/communication-email");
 const juice = require("juice");
-const { initSnowflakeConnection, executeSql } = require("../snowflake");
 
 const dbTables = [
   {
@@ -43,27 +42,63 @@ async function checkTablesLastUpdate(context) {
     const { db, tables } = database;
 
     try {
-      const connection = await initSnowflakeConnection(db);
-      const lastAlterDates = await executeSql(
-        connection,
-        `SELECT TABLE_NAME, LAST_ALTERED FROM ${db}.INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME IN (${tables
+      const snowflake = await Snowflake.create(context, db);
+      const lastAlterDates = await snowflake.execute(
+        `SELECT TABLE_NAME, LAST_ALTERED FROM ${
+          snowflake.dbName
+        }.INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME IN (${tables
           .map((t) => `'${t}'`)
           .join(",")})`
       );
 
-      for (const { LAST_ALTERED, TABLE_NAME } of lastAlterDates) {
-        const timeSince = moment()
+      for (const table of tables) {
+        try {
+          const records = await snowflake.execute(
+            `SELECT INSERTED_AT FROM ${table} WHERE INSERTED_AT IS NOT NULL ORDER BY INSERTED_AT DESC LIMIT 1`
+          );
+          const tableRecord = lastAlterDates.find(
+            (t) => t.TABLE_NAME === table
+          );
+          const record = records[0];
+
+          if (!tableRecord) {
+            throw new Error("Table does not exist");
+          }
+          tableRecord.LAST_RECORD_INSERTED_AT = record?.INSERTED_AT ?? null;
+        } catch (err) {
+          context.error("Getting INSERTED_AT error:", err);
+        }
+      }
+
+      for (const {
+        LAST_ALTERED,
+        LAST_RECORD_INSERTED_AT,
+        TABLE_NAME,
+      } of lastAlterDates) {
+        const timeSinceAlter = moment()
           .utc()
           .diff(moment(LAST_ALTERED).utc(), "minutes");
-        context.log(`${TABLE_NAME}: Last update ${timeSince} minutes ago`);
-        if (timeSince > 120) {
+
+        context.log(`${TABLE_NAME}: Last update ${timeSinceAlter} minutes ago`);
+
+        const timeSinceInsert = LAST_RECORD_INSERTED_AT
+          ? moment()
+              .utc()
+              .diff(moment(LAST_RECORD_INSERTED_AT).utc(), "minutes")
+          : 0;
+
+        context.log(
+          `${TABLE_NAME}: Last insert ${timeSinceInsert} minutes ago`
+        );
+
+        if (timeSinceAlter > 120 || LAST_RECORD_INSERTED_AT > 120) {
           untouchedTables.push({
             table: TABLE_NAME,
-            timeSince,
+            timeSinceAlter,
+            timeSinceInsert,
           });
         }
       }
-      connection.destroy();
     } catch (err) {
       context.error(err);
     }
@@ -100,6 +135,7 @@ async function sendAlert(tables) {
               <tr>
                 <th>Table Name</th>
                 <th>Last Updated</th>
+                <th>Last Record Inserted</th>
               </tr>
             </thead>
             <tbody>
@@ -108,7 +144,8 @@ async function sendAlert(tables) {
                   (t) =>
                     `<tr>
                     <td>${t.table}</td>
-                    <td>${t.timeSince} minutes ago</td>
+                    <td>${t.timeSinceAlter} minutes ago</td>
+                    <td>${t.timeSinceInsert ?? 0} minutes ago</td>
                   </tr>
                 `
                 )
@@ -135,3 +172,5 @@ async function sendAlert(tables) {
 module.exports = async function (context, myTimer) {
   await checkTablesLastUpdate(context);
 };
+
+// module.exports(console, {});
