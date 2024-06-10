@@ -199,7 +199,7 @@ class Snowflake {
     });
 
     for (const record of records) {
-      record.inserted_at = new Date().toUTCString();
+      record.inserted_at = new Date().toISOString();
     }
 
     if (!forceCreateTable) {
