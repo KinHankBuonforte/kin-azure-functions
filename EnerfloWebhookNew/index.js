@@ -10,7 +10,7 @@ module.exports = async function (context, req) {
   const snowflake = await Snowflake.create(context);
 
   await snowflake.execute(
-    `INSERT INTO ENERFLO_WEBHOOK_EVENTS_NEW (ID, PARAMS, PROCESSED, INSERTED_AT) VALUES ('${ID}', '${PARAMS}', false, '${new Date().toUTCString()}')`
+    `INSERT INTO ENERFLO_WEBHOOK_EVENTS_NEW (ID, PARAMS, PROCESSED, INSERTED_AT) VALUES ('${ID}', '${PARAMS}', false, '${new Date().toISOString()}')`
   );
 
   context.res = {
