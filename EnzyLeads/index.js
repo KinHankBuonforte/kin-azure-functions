@@ -25,7 +25,6 @@ const fetchLeads = async function (context) {
       leadId: r.leadId,
     }));
     appointments.push(...leadAppointments);
-    delete r.appointments;
   }
   const flattenLeadRecords = leads.map((x) => flattenObject(x));
 

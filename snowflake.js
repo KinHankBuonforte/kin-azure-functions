@@ -62,7 +62,7 @@ class Snowflake {
     return this.connection;
   }
 
-  async execute(sql) {
+  async execute(sql, parameters = undefined) {
     if (!this.connection) {
       throw new Error("No DB connection");
     }
@@ -79,6 +79,7 @@ class Snowflake {
             resolve(rows);
           }
         },
+        parameters,
       });
     });
   }
