@@ -1,5 +1,6 @@
 const { gql, GraphQLClient } = require("graphql-request");
 const { flattenObject, Snowflake } = require("../snowflake");
+const { default: axios } = require("axios");
 
 const client = new GraphQLClient("https://kinhome.enerflo.io/graphql", {
   headers: {
@@ -89,7 +90,10 @@ const fetchCustomers = async (context) => {
   }
   context.log(`${records.length} records to insert`);
 
+  await addExternalId(records);
+
   const flattenRecords = records.map((x) => flattenObject(x));
+
   const columns = await snowflake.createOrUpdateTable(
     tableName,
     flattenRecords,
@@ -98,6 +102,42 @@ const fetchCustomers = async (context) => {
   );
   await snowflake.insert(flattenRecords, tableName, columns, forceCreateTable);
 };
+
+async function addExternalId(records) {
+  const chunkSize = 10;
+
+  try {
+    for (let i = 0; i < records.length; i += chunkSize) {
+      const chunk = records.slice(i, i + chunkSize);
+      const externalIds = await Promise.all(
+        chunk.map((c) => getExternalId(c.id))
+      );
+
+      for (let j = 0; j < externalIds.length; j++) {
+        chunk[j].external_lead_id = externalIds[j];
+      }
+    }
+  } catch (err) {
+    console.error(err.response.data);
+  }
+}
+
+async function getExternalId(enerfloV2Id) {
+  const { data } = await axios.post(
+    "https://enerflo.io/api/v1/integrations/map/search?v=v1v2",
+    {
+      integration_record_type: "EnerfloV2Customer",
+      integration_id: "35",
+      integration_record_id: enerfloV2Id,
+    },
+    {
+      headers: {
+        "api-key": process.env.ENERFLO_API_KEY,
+      },
+    }
+  );
+  return data?.data?.lead?.external_id;
+}
 
 module.exports = async function (context, myTimer) {
   var timeStamp = new Date().toISOString();
@@ -115,7 +155,6 @@ module.exports = async function (context, myTimer) {
     };
   } catch (err) {
     context.error(err);
-    throw err;
   }
 };
 
