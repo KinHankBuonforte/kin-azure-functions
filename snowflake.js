@@ -22,10 +22,10 @@ class Snowflake {
   async connect(dbName = "ENERFLO") {
     this.connection = await new Promise((resolve, reject) => {
       const connection = snowflake.createConnection({
-        account: "ch10140.us-central1.gcp",
-        username: "HANKB",
-        password: "HankB123",
-        application: "COMPUTE_WH",
+        account: process.env.SNOWFLAKE_ACCOUNT,
+        username: process.env.SNOWFLAKE_USERNAME,
+        password: process.env.SNOWFLAKE_PASSWORD,
+        application: process.env.SNOWFLAKE_APP,
       });
       const database = getDBName(dbName);
 
@@ -264,11 +264,6 @@ class Snowflake {
       const newColumnNames = columnsConfig
         .map((c) => c.newName)
         .sort((a, b) => (a > b ? 1 : -1));
-
-      console.log(
-        newColumnNames.length,
-        existingColumns.sort((a, b) => (a > b ? 1 : -1)).length
-      );
 
       const forceUpdate =
         existingColumns.sort((a, b) => (a > b ? 1 : -1)).join(",") !==
